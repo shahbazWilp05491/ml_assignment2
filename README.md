@@ -11,27 +11,27 @@ d. Models used ->
 ![alt text](image.png)
 
 ______________________________________________________________________________________________________________________________________________________________________
-ML Model Name             |   Observation about model performance
-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
-Logistic Regression       |  Strong Baseline Performer. It functions exceptionally well on this dataset because many clinical features (like sex, exang, and fbs) have 
-                          |  a direct, linear relationship with heart disease risk. It displays a high overall accuracy (~84%) and excellent calibration, but it can 
-                          | occasionally miss non-linear feature combinations (e.g., specific age groups mixed with specific cholesterol boundaries).
-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
-Decision Tree             |  Highly Prone to Overfitting. While it captures complex rules easily, it tends to over-segment the heart disease data. Because of this, it 
-                          |  shows lower test stability, a drop in accuracy (~75%), and the lowest AUC score among the models. It serves as an excellent visual tool for 
-                          | clinical rule generation but requires regularization (like limiting max_depth) to prevent errors on new data.
-------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-kNN                       |  Distance-Sensitive and Inconsistent. K-Nearest Neighbors relies heavily on the clean scaling of features like age, chol, and trestbps. 
-                          |  While it achieves decent accuracy (~82%), it suffers from low Precision and Recall on the test slice. It struggles when dealing with mixed
-                          |  data containing both dense continuous values and sparse one-hot encoded categorical variables.
-------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-Naive Bayes               |  Excellent Recall but Low Precision. By assuming all clinical features are entirely independent, Gaussian Naive Bayes struggles with 
-                          |  overlapping health metrics. However, it excels at flag-catching, yielding the highest Recall (~54%). In a clinical context, this means it 
-                          | is excellent at minimizing false negatives (missing a sick patient), though it generates more false alarms.
-------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-Random Forest (Ensemble)  |  Robust and Generalised Top Performer. By averaging the outputs of multiple randomized decision trees, it eliminates the overfitting weakness
-                          |  of a single tree. It handles the mixed data types (categorical and numerical) flawlessly, balancing out precision and recall errors. This 
-                          | results in the most stable, highest overall scoring metrics across the board.
+ML Model Name             ->   Observation about model performance
+_______________________________________________________________________________________________________________________________________________________________________  
+Logistic Regression       ->  Strong Baseline Performer. It functions exceptionally well on this dataset because many clinical features (like sex, exang, and fbs) have 
+                            a direct, linear relationship with heart disease risk. It displays a high overall accuracy (~84%) and excellent calibration, but it can 
+                           occasionally miss non-linear feature combinations (e.g., specific age groups mixed with specific cholesterol boundaries).
+_______________________________________________________________________________________________________________________________________________________________________  
+Decision Tree             ->  Highly Prone to Overfitting. While it captures complex rules easily, it tends to over-segment the heart disease data. Because of this, it 
+                            shows lower test stability, a drop in accuracy (~75%), and the lowest AUC score among the models. It serves as an excellent visual tool for 
+                           clinical rule generation but requires regularization (like limiting max_depth) to prevent errors on new data.
+_______________________________________________________________________________________________________________________________________________________________________  
+kNN                       ->  Distance-Sensitive and Inconsistent. K-Nearest Neighbors relies heavily on the clean scaling of features like age, chol, and trestbps. 
+                            While it achieves decent accuracy (~82%), it suffers from low Precision and Recall on the test slice. It struggles when dealing with mixed
+                            data containing both dense continuous values and sparse one-hot encoded categorical variables.
+_______________________________________________________________________________________________________________________________________________________________________  
+Naive Bayes               ->  Excellent Recall but Low Precision. By assuming all clinical features are entirely independent, Gaussian Naive Bayes struggles with 
+                            overlapping health metrics. However, it excels at flag-catching, yielding the highest Recall (~54%). In a clinical context, this means it 
+                           is excellent at minimizing false negatives (missing a sick patient), though it generates more false alarms.
+_______________________________________________________________________________________________________________________________________________________________________  
+Random Forest (Ensemble)  ->  Robust and Generalised Top Performer. By averaging the outputs of multiple randomized decision trees, it eliminates the overfitting weakness
+                            of a single tree. It handles the mixed data types (categorical and numerical) flawlessly, balancing out precision and recall errors. This 
+                           results in the most stable, highest overall scoring metrics across the board.
 _______________________________________________________________________________________________________________________________________________________________________  
 
 The clear overall winner for this dataset is the Random Forest Classifier. It achieved the highest accuracy (84.88%). It achieved highest MCC coefficient (0.2866).

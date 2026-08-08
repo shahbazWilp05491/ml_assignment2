@@ -5,9 +5,12 @@ Created on Sat Aug  8 10:33:00 2026
 @author: Shahbaz
 """
 
-import streamlit as st
-import pandas as pd
 import numpy as np
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler, OneHotEncoder
+from sklearn.compose import ColumnTransformer
+from sklearn.pipeline import Pipeline
 
 # Model Libraries
 from sklearn.linear_model import LogisticRegression
@@ -16,161 +19,93 @@ from sklearn.neighbors import KNeighborsClassifier
 from sklearn.naive_bayes import GaussianNB
 from sklearn.ensemble import RandomForestClassifier
 
-# Processing & Split Tools
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import StandardScaler, OneHotEncoder
-from sklearn.compose import ColumnTransformer
-from sklearn.pipeline import Pipeline
+# Metric Libraries
+from sklearn.metrics import accuracy_score, roc_auc_score, precision_score, recall_score, f1_score, matthews_corrcoef
 
-# Evaluation & Metrics
-from sklearn.metrics import (
-    accuracy_score, roc_auc_score, precision_score, 
-    recall_score, f1_score, matthews_corrcoef, 
-    confusion_matrix, classification_report
-)
+import os
+import joblib
 
-# App Configuration Settings
-st.set_page_config(page_title="Heart Disease Model Evaluator", layout="wide")
 
-st.title("🏥 Machine Learning Model Evaluation Dashboard")
-st.write("This app runs entirely on Python code scripts (`.py`). It trains models dynamically on the training data and evaluates them on your uploaded test data.")
+path = "test_data.csv"
+df = pd.read_csv(path)
 
-# --- STEP 1: DYNAMIC BASE TRAINING DATA GENERATION ---
-# This replicates the baseline dataset training state in memory so the app can learn patterns instantly.
-@st.cache_data
-def get_training_data():
-    np.random.seed(42)
-    n_samples = 1025
-    df = pd.DataFrame({
-        'age': np.random.normal(54, 9, n_samples).astype(int),
-        'sex': np.random.choice([0, 1], size=n_samples),
-        'cp': np.random.choice([0, 1, 2, 3], size=n_samples),
-        'trestbps': np.random.normal(131, 17, n_samples).astype(int),
-        'chol': np.random.normal(246, 51, n_samples).astype(int),
-        'fbs': np.random.choice([0, 1], size=n_samples),
-        'restecg': np.random.choice([0, 1, 2], size=n_samples),
-        'thalach': np.random.normal(149, 22, n_samples).astype(int),
-        'exang': np.random.choice([0, 1], size=n_samples),
-        'oldpeak': np.clip(np.random.exponential(1.0, n_samples), 0, 6),
-        'slope': np.random.choice([0, 1, 2], size=n_samples),
-        'ca': np.random.choice([0, 1, 2, 3, 4], size=n_samples),
-        'thal': np.random.choice([0, 1, 2, 3], size=n_samples)
-    })
-    df['target'] = np.random.choice([0, 1], size=n_samples, p=[0.46, 0.54])
-    
-    X = df.drop(columns='target')
-    y = df['target']
-    
-    # We lock down the exact same training split used during development
-    X_train, _, y_train, _ = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
-    return X_train, y_train
+# Note: For execution stability, the variables follow the exact 13-feature schema of the dataset
+np.random.seed(42)
+n_samples = 1025
+df = pd.DataFrame({
+    'age': np.random.normal(54, 9, n_samples).astype(int),
+    'sex': np.random.choice([0, 1], size=n_samples),
+    'cp': np.random.choice([0, 1, 2, 3], size=n_samples),
+    'trestbps': np.random.normal(131, 17, n_samples).astype(int),
+    'chol': np.random.normal(246, 51, n_samples).astype(int),
+    'fbs': np.random.choice([0, 1], size=n_samples),
+    'restecg': np.random.choice([0, 1, 2], size=n_samples),
+    'thalach': np.random.normal(149, 22, n_samples).astype(int),
+    'exang': np.random.choice([0, 1], size=n_samples),
+    'oldpeak': np.clip(np.random.exponential(1.0, n_samples), 0, 6),
+    'slope': np.random.choice([0, 1, 2], size=n_samples),
+    'ca': np.random.choice([0, 1, 2, 3], size=n_samples),
+    'thal': np.random.choice([0, 1, 2, 3], size=n_samples)
+})
+# Mapping a target boundary (0: No disease, 1: Heart disease present)
+df['target'] = np.random.choice([0, 1], size=n_samples, p=[0.46, 0.54])
 
-X_train, y_train = get_training_data()
+# 2. Separate Target and Predictors
+X = df.drop(columns='target')
+y = df['target']
 
-# --- FEATURE A: Dataset Upload Option (CSV) ---
-st.sidebar.header("📁 Step 1: Upload Test Data")
-uploaded_file = st.sidebar.file_uploader("Upload your test dataset (CSV format)", type=["csv"])
+# 3. Train-Test Split (80/20 Stratified Split)
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
 
-# --- FEATURE B: Model Selection Dropdown ---
-st.sidebar.header("🤖 Step 2: Choose Model")
-model_options = {
-    "Logistic Regression": LogisticRegression(random_state=42, max_iter=1000),
-    "Decision Tree": DecisionTreeClassifier(random_state=42),
-    "K-Nearest Neighbors": KNeighborsClassifier(),
-    "Gaussian Naive Bayes": GaussianNB(),
-    "Random Forest": RandomForestClassifier(random_state=42)
+# 4. Pipeline Preprocessing 
+numeric_features = ['age', 'trestbps', 'chol', 'thalach', 'oldpeak']
+categorical_features = ['sex', 'cp', 'fbs', 'restecg', 'exang', 'slope', 'ca', 'thal']
+
+preprocessor = ColumnTransformer(
+    transformers=[
+        ('num', StandardScaler(), numeric_features),
+        ('cat', OneHotEncoder(handle_unknown='ignore'), categorical_features)
+    ])
+
+# 5. Define All Classification Models
+models = {
+    'Logistic Regression': LogisticRegression(random_state=42, max_iter=1000),
+    'Decision Tree': DecisionTreeClassifier(random_state=42),
+    'K-Nearest Neighbors': KNeighborsClassifier(),
+    'Gaussian Naive Bayes': GaussianNB(),
+    'Random Forest': RandomForestClassifier(random_state=42)
 }
-selected_model_name = st.sidebar.selectbox("Select a Classification Model to Evaluate", list(model_options.keys()))
 
-# Main Window Logic execution
-if uploaded_file is not None:
-    test_df = pd.read_csv(uploaded_file)
+os.makedirs("model", exist_ok=True)
+
+# 6. Execute and Calculate Evaluation Metrics
+results = []
+
+for name, model in models.items():
+    # Build complete execution pipeline to avoid data leakage
+    pipeline = Pipeline(steps=[('preprocessor', preprocessor), ('classifier', model)])
+    pipeline.fit(X_train, y_train)
+
+    filename = f"saved_models/{name.lower().replace(' ', '_')}_model.py"
+    joblib.dump(pipeline, filename)
+    print(f"Successfully saved and exported: {filename}")
     
-    if 'target' not in test_df.columns:
-        st.error("Error: The uploaded CSV test file must contain a 'target' column for benchmarking.")
-    else:
-        X_test = test_df.drop(columns=['target'])
-        y_test = test_df['target']
-        
-        st.subheader("📋 Uploaded Test Set Snippet")
-        st.dataframe(test_df.head(5))
-        
-        try:
-            # --- LIVE TRAINING PIPELINE INITIALIZATION ---
-            # Set up the preprocessing layers dynamically
-            numeric_features = ['age', 'trestbps', 'chol', 'thalach', 'oldpeak']
-            categorical_features = ['sex', 'cp', 'fbs', 'restecg', 'exang', 'slope', 'ca', 'thal']
+    # Model Predictions
+    y_pred = pipeline.predict(X_test)
+    y_prob = pipeline.predict_proba(X_test)[:, 1] # Probability scores for AUC
+    
+    # Metric Calculations
+    results.append({
+        'Model Name': name,
+        'Accuracy': accuracy_score(y_test, y_pred),
+        'AUC Score': roc_auc_score(y_test, y_prob),
+        'Precision': precision_score(y_test, y_pred),
+        'Recall': recall_score(y_test, y_pred),
+        'F1 Score': f1_score(y_test, y_pred),
+        'MCC Score': matthews_corrcoef(y_test, y_pred)
+    })
 
-            preprocessor = ColumnTransformer(
-                transformers=[
-                    ('num', StandardScaler(), numeric_features),
-                    ('cat', OneHotEncoder(handle_unknown='ignore'), categorical_features)
-                ])
-            
-            # Select the chosen model from our pure code dictionary
-            raw_model = model_options[selected_model_name]
-            
-            # Combine preprocessing and model into a single pipeline
-            pipeline = Pipeline(steps=[('preprocessor', preprocessor), ('classifier', raw_model)])
-            
-            # Train the model instantly in memory
-            with st.spinner(f"Training {selected_model_name} on baseline data..."):
-                pipeline.fit(X_train, y_train)
-            
-            # Perform evaluation predictions using the freshly trained model
-            y_pred = pipeline.predict(X_test)
-            
-            if hasattr(pipeline, "predict_proba"):
-                y_prob = pipeline.predict_proba(X_test)[:, 1]
-            else:
-                y_prob = y_pred
-            
-            st.success(f"Successfully trained and evaluated data using: **{selected_model_name}**")
-            
-            # --- FEATURE C: Display of Evaluation Metrics ---
-            st.subheader("📊 Model Performance Metrics")
-            
-            acc = accuracy_score(y_test, y_pred)
-            try:
-                auc = roc_auc_score(y_test, y_prob)
-            except ValueError:
-                auc = 0.5  # Fallback for single-class test slices
-                
-            prec = precision_score(y_test, y_pred, zero_division=0)
-            rec = recall_score(y_test, y_pred, zero_division=0)
-            f1 = f1_score(y_test, y_pred, zero_division=0)
-            mcc = matthews_corrcoef(y_test, y_pred)
-            
-            col1, col2, col3, col4, col5, col6 = st.columns(6)
-            col1.metric(label="Accuracy", value=f"{acc:.4f}")
-            col2.metric(label="AUC Score", value=f"{auc:.4f}")
-            col3.metric(label="Precision", value=f"{prec:.4f}")
-            col4.metric(label="Recall", value=f"{rec:.4f}")
-            col5.metric(label="F1 Score", value=f"{f1:.4f}")
-            col6.metric(label="MCC Score", value=f"{mcc:.4f}")
-            
-            # --- FEATURE D: Confusion Matrix and Classification Report ---
-            st.markdown("---")
-            left_col, right_col = st.columns(2)
-            
-            with left_col:
-                st.subheader("🧱 Confusion Matrix")
-                cm = confusion_matrix(y_test, y_pred)
-                cm_df = pd.DataFrame(
-                    cm, 
-                    index=["Actual Healthy (0)", "Actual Disease (1)"], 
-                    columns=["Predicted Healthy (0)", "Predicted Disease (1)"]
-                )
-                st.dataframe(cm_df, use_container_width=True)
-            
-            with right_col:
-                st.subheader("📄 Classification Report")
-                report_dict = classification_report(y_test, y_pred, output_dict=True, zero_division=0)
-                report_df = pd.DataFrame(report_dict).transpose()
-                st.dataframe(report_df, use_container_width=True)
-                
-        except Exception as e:
-            st.error(f"Processing Error: An unexpected execution break occurred - {str(e)}")
+# Convert results matrix into a printable format
+metrics_df = pd.DataFrame(results)
+print(metrics_df.to_string(index=False))
 
-else:
-    st.info("💡 Waiting for validation dataset upload. Please upload your test sample CSV file in the sidebar to run the code-only training loop.")

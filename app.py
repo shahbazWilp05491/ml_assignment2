@@ -86,7 +86,7 @@ for name, model in models.items():
     pipeline = Pipeline(steps=[('preprocessor', preprocessor), ('classifier', model)])
     pipeline.fit(X_train, y_train)
 
-    filename = f"saved_models/{name.lower().replace(' ', '_')}_model.py"
+    filename = f"model/{name.lower().replace(' ', '_')}_model.py"
     joblib.dump(pipeline, filename)
     print(f"Successfully saved and exported: {filename}")
     
